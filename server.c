@@ -10,8 +10,7 @@
 #include "aw.h"
 #include <string.h>
 #include <arpa/inet.h>
-#include <stdbool.h>
-#define MAXLINE 4096
+#include "safe_connect.h"
 
 void sig_child(int signo) //消灭僵尸进程 僵尸进程会占用资源如果一直不释放的话
 {
@@ -26,7 +25,7 @@ int main(int arg, char *argv[])
 	struct sockaddr_in server_addr;
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_size = sizeof(client_addr);
-	char recv_buffer[1024];
+	char recv_buffer[DEFAULT_RECV_BUFFER];
 	int n;
 	int server_socket_reuseable = 1;
 
@@ -35,9 +34,8 @@ int main(int arg, char *argv[])
 	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 	server_addr.sin_port = htons(5000);
 
-	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-		perror("create socket failed");
-	if ((setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (const void*)&server_socket_reuseable, sizeof(server_socket_reuseable))) < 0)
+	server_fd = socket_s(AF_INET, SOCK_STREAM, 0);
+	if ((setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (const void *)&server_socket_reuseable, sizeof(server_socket_reuseable))) < 0)
 		perror("setsockopt SO_REUSEADDR failed");
 
 	if ((bind(server_fd, (const struct sockaddr *)&server_addr, sizeof(server_addr))) < 0)
@@ -50,16 +48,18 @@ int main(int arg, char *argv[])
 	// signal(SIGCHLD, sig_child);
 	printf("------------waiting for client -----------\n");
 	int pid;
-
+	if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
+							&client_addr_size)) == -1)
+	{
+		perror("accept failed:");
+	}
 	while (1)
 	{
-		if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
-						  &client_addr_size)) == -1)
-		{
-			perror("accept failed:");
-		}
-		n = recv(client_fd, recv_buffer, 1024, 0); //分析请求。//静态请求 直接返回，动态请求 读取 执行 返回执行结果
-		useit(client_fd, recv_buffer);
-		close(client_fd);
+		memset(recv_buffer, 0, sizeof(char) * DEFAULT_RECV_BUFFER);
+		n = recv_s(client_fd, recv_buffer, DEFAULT_RECV_BUFFER, 0);
+		if (n == 0)
+			break;
+		handle(client_fd, recv_buffer, n);
 	}
+	close(client_fd);
 }

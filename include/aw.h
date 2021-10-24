@@ -10,22 +10,17 @@
 #include <string.h>
 #include <stdio.h>
 #include <arpa/inet.h>
+#include "safe_connect.h"
 
-extern int codetype; //编码
-extern char last[1024];
-extern char msg[10];
-extern char path[100]; //路径
-extern char v1[100];
-extern char value1[200];
-extern char v2[100];
-extern char value2[200];
-extern char buff[1024];
-extern char buff2[1024]; //
-extern int is_static;
-extern struct stat sbuf;
-extern int err(int code, char *m);
-extern void useit(int fd1, char *url);
-extern void getstatic(int fd1);
-extern void getdynamic(int fd1);
-extern void cutout(char *uri, int begin, int end, char *ret);
+#define DEFAULT_MSG_BUFFER_SIZE 100
+#define DEFAULT_URI_BUFFER_SIZE 100
+#define DEFAULT_HEADER_LEN 2048
+#define DEFAULT_RECV_BUFFER 4096 * 10
+#define DEFAULT_SEND_BUFFER 4096 * 10
+#define DEFAULT_BUFFER_SIZE 2 * DEFAULT_RECV_BUFFER
+#define DEFAULT_RESOURCE_DIR "./resources/"
+
+#define min(a, b) ((a < b) ? a : b)
+
+void handle(int fd1, char *url, int valid_len);
 #endif
