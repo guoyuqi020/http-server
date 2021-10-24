@@ -6,3 +6,4 @@ CMakeFiles
 resources
 *.a
 .vscode
+!resources/favicon.ico
