@@ -1,0 +1,8 @@
+# ninja log v5
+0	2	0	clean	a31eedcededa8236
+60	94	1635587217809298668	server	1955167b8920396c
+0	37	1635587217749298699	lib/CMakeFiles/handler_lib.dir/safe_connect.c.o	7d465fdced003223
+0	38	1635587217749298699	lib/CMakeFiles/handler_lib.dir/findfiles.c.o	56bac3559713e8ef
+0	44	1635587217757298695	CMakeFiles/server.dir/server.c.o	172bcc9ed8dd5d82
+0	53	1635587217765298691	lib/CMakeFiles/handler_lib.dir/handler.c.o	864e5bfc6016c294
+53	60	1635587217777298684	lib/libhandler_lib.a	5c6c5d1e572dab10

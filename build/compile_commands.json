@@ -1,0 +1,22 @@
+[
+{
+  "directory": "/home/yuqi/http-server/build",
+  "command": "/bin/clang-10 -I../include -g -o CMakeFiles/server.dir/server.c.o -c /home/yuqi/http-server/server.c",
+  "file": "/home/yuqi/http-server/server.c"
+},
+{
+  "directory": "/home/yuqi/http-server/build",
+  "command": "/bin/clang-10 -I../include -g -o lib/CMakeFiles/handler_lib.dir/findfiles.c.o -c /home/yuqi/http-server/lib/findfiles.c",
+  "file": "/home/yuqi/http-server/lib/findfiles.c"
+},
+{
+  "directory": "/home/yuqi/http-server/build",
+  "command": "/bin/clang-10 -I../include -g -o lib/CMakeFiles/handler_lib.dir/handler.c.o -c /home/yuqi/http-server/lib/handler.c",
+  "file": "/home/yuqi/http-server/lib/handler.c"
+},
+{
+  "directory": "/home/yuqi/http-server/build",
+  "command": "/bin/clang-10 -I../include -g -o lib/CMakeFiles/handler_lib.dir/safe_connect.c.o -c /home/yuqi/http-server/lib/safe_connect.c",
+  "file": "/home/yuqi/http-server/lib/safe_connect.c"
+}
+]

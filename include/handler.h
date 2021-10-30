@@ -1,5 +1,5 @@
-#ifndef _AW_H_
-#define _AW_H_
+#ifndef _HANDLER_H_
+#define _HANDLER_H_
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
@@ -11,9 +11,10 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 #include "safe_connect.h"
+#include <event.h>
 
-#define DEFAULT_MSG_BUFFER_SIZE 100
-#define DEFAULT_URI_BUFFER_SIZE 100
+#define DEFAULT_MSG_BUFFER_SIZE 256
+#define DEFAULT_URI_BUFFER_SIZE 1024
 #define DEFAULT_HEADER_LEN 2048
 #define DEFAULT_RECV_BUFFER 4096 * 10
 #define DEFAULT_SEND_BUFFER 4096 * 10

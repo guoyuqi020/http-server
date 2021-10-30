@@ -1,4 +1,6 @@
 #include "handler.h"
+#include "findfiles.h"
+
 char v1[100];
 char value1[200];
 char v2[100];
@@ -30,54 +32,37 @@ void status_to_text(int status, char *msg)
 	case 202:
 		strcpy(msg, "accepted");
 		break;
+	case 500:
+		strcpy(msg, "internal error");
+		break;
 	default:
 		printf("unknown status code %d", status);
 		exit(-1);
 	}
 	return;
 }
-void cutout(char *uri, int begin, int end, char *ret)
+int cut_params(char *uri, char *params)
 {
-	int i = 0;
-	int j = 0;
-	int s, e;
-	for (; i < strlen(uri); i++)
+	char *start_pos;
+	if ((start_pos = strstr(uri, "?")) == NULL)
 	{
-		if (uri[i] == begin)
-		{
-			s = i;
-		}
-		if (uri[i] == end && end != '\0')
-		{
-			e = i;
-			if (s < e)
-				break;
-		}
+		return 0;
 	}
-	if (end == '\0')
-	{
-		int len = strlen(uri) - s;
-		char ss[len];
-		memcpy(ret, uri + s + 1, len - 1);
-		ret[len] = '\0'; //
-	}
-	else
-	{
-		int len = e - s;
-		memcpy(ret, uri + s + 1, len - 1);
-		ret[len] = '\0';
-	}
+	strcpy(params, start_pos + 1);
+	*start_pos = (char)0;
+	strcat(params, "&");
+	return 0;
 }
 
 // Returns 0 if it finds "boundary" in buffer, and copies it into value.
 // Else it returns -1.
-int get_value(char *buffer, const char *key, char *value)
+int get_value(char *buffer, const char *key, char *value, char *end_str)
 {
 	char *pos;
-	if (pos = strstr(buffer, key))
+	if ((pos = strstr(buffer, key)) != NULL)
 	{
 		char *start_pos = pos + strlen(key) + 1;
-		char *end_pos = strstr(start_pos, "\r\n");
+		char *end_pos = strstr(start_pos, end_str);
 		int value_len = end_pos - start_pos;
 		memcpy(value, start_pos, value_len);
 		value[value_len] = (char)0;
@@ -99,38 +84,45 @@ void simple_format(int client_fd, int status)
 	return;
 }
 
-void homepage(int client_fd)
+void generate_html(char *buff, char *msg)
 {
+	struct FileName *f_head = readFileList("./resources");
+	struct FileName *cur = f_head;
+	sprintf(buff, "%s<!DOCTYPE html>\r\n<html>\r\n\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<title>xx.xx</title>\r\n</head>\r\n\r\n<body>\r\n<p>%s</p><br>\r\n", buff, msg);
+	while (cur != NULL)
+	{
+		char encoded_filename[DEFAULT_FILENAME_LEN * 2];
+		strcpy(encoded_filename, cur->filename);
+		urlencode(encoded_filename);
+		sprintf(buff, "%s<a href=\"/download?filename=%s\">%s</a><br>\r\n", buff, encoded_filename, cur->filename);
+		cur = cur->next;
+	}
+	sprintf(buff, "%s<form action=\"/upload\" method=\"post\" enctype=\"multipart/form-data\">\r\n上传文件： <input type=\"file\" name=\"upload\"><br>\r\n<input type=\"submit\">\r\n</form>\r\n</body>\r\n</html>", buff);
+	cur = f_head;
+	while (cur != NULL)
+	{
+		cur = cur->next;
+		free(f_head);
+		f_head = cur;
+	}
+}
+
+void homepage(int client_fd, char *print_msg)
+{
+	urldecode(print_msg);
 	char send_buffer[DEFAULT_SEND_BUFFER];
 	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
-	int fd;
-	if ((fd = open("./index.html", O_RDONLY)) != -1)
-	{
-		char buff[DEFAULT_BUFFER_SIZE];
-		int read_len;
-		if ((read_len = read(fd, buff, DEFAULT_BUFFER_SIZE)) > 0)
-		{
-			int status = 200;
-			char msg[DEFAULT_MSG_BUFFER_SIZE];
-			status_to_text(status, msg);
-			sprintf(send_buffer, "HTTP/1.1 %d %s\r\n", status, msg);
-			sprintf(send_buffer, "%sContent-Length: %d\r\n", send_buffer, read_len);
-			sprintf(send_buffer, "%sContent-Type:text/html,charset:utf-8;\r\n\r\n", send_buffer);
-			sprintf(send_buffer, "%s%s", send_buffer, buff);
-			send(client_fd, send_buffer, strlen(send_buffer), 0);
-		}
-		else
-		{
-			// empty index file
-			simple_format(client_fd, 204);
-		}
-		close(fd);
-	}
-	else
-	{
-		// permission denied
-		simple_format(client_fd, 403);
-	}
+	char buff[DEFAULT_BUFFER_SIZE];
+	memset(buff, 0, sizeof(char) * DEFAULT_BUFFER_SIZE);
+	generate_html(buff, print_msg);
+	int status = 200;
+	char msg[DEFAULT_MSG_BUFFER_SIZE];
+	status_to_text(status, msg);
+	sprintf(send_buffer, "HTTP/1.1 %d %s\r\n", status, msg);
+	sprintf(send_buffer, "%sContent-Length: %ld\r\n", send_buffer, strlen(buff));
+	sprintf(send_buffer, "%sContent-Type:text/html,charset:utf-8;\r\n\r\n", send_buffer);
+	sprintf(send_buffer, "%s%s", send_buffer, buff);
+	send(client_fd, send_buffer, strlen(send_buffer), 0);
 	return;
 }
 
@@ -142,9 +134,9 @@ void file_upload(int client_fd, char *buffer, int valid_len)
 	int recv_len, content_len, file_buffer_valid_len;
 	char *file_start_pos, *file_end_pos;
 
-	get_value(buffer, "boundary", boundary + 2);
+	get_value(buffer, "boundary", boundary + 2, "\r\n");
 	boundary[0] = boundary[1] = '-';
-	get_value(buffer, "Content-Length", content_len_str);
+	get_value(buffer, "Content-Length", content_len_str, "\r\n");
 	content_len = atoi(content_len_str);
 	char file_buffer[DEFAULT_BUFFER_SIZE];
 	memset(file_buffer, 0, DEFAULT_BUFFER_SIZE);
@@ -165,7 +157,7 @@ void file_upload(int client_fd, char *buffer, int valid_len)
 
 	// we set default recv buffer to 4K (valid HTTP header is less than 2K),
 	// thus this header must be in the buffer.
-	get_value(file_buffer, "filename", filename);
+	get_value(file_buffer, "filename", filename, "\r\n");
 	filename[strlen(filename) - 1] = (char)0;
 	memmove(filename, filename + 1, strlen(filename));
 	// open write file fd
@@ -210,13 +202,56 @@ void file_upload(int client_fd, char *buffer, int valid_len)
 	status_to_text(303, msg);
 	sprintf(send_buffer, "HTTP/1.1 %d %s\r\n", 303, msg);
 	sprintf(send_buffer, "%sContent-Length: %d\r\n", send_buffer, 0);
-	sprintf(send_buffer, "%sLocation: /\r\n\r\n", send_buffer);
+	sprintf(send_buffer, "%sLocation: /?print_msg=upload file \"%s\" success!\r\n\r\n", send_buffer, filename);
 	send(client_fd, send_buffer, strlen(send_buffer), 0);
+	return;
+}
+
+void file_download(int client_fd, char *filename)
+{
+	urldecode(filename);
+	printf("%s\n", filename);
+	char msg[DEFAULT_MSG_BUFFER_SIZE];
+	char send_buffer[DEFAULT_SEND_BUFFER];
+	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
+	char filepath[DEFAULT_URI_BUFFER_SIZE] = "./resources/";
+	strcpy(filepath + strlen(filepath), filename);
+	FILE *fd = fopen(filepath, "rb");
+	if (fd == NULL)
+	{
+		simple_format(client_fd, 500);
+		return;
+	}
+	fseek(fd, 0, SEEK_END);
+	int file_len = ftell(fd);
+	rewind(fd);
+	int status = 200;
+	status_to_text(status, msg);
+	sprintf(send_buffer, "HTTP/1.1 %d %s\r\n", status, msg);
+	sprintf(send_buffer, "%sContent-Length: %d\r\n", send_buffer, file_len);
+	sprintf(send_buffer, "%sContent-Type: application/octet-stream\r\n", send_buffer);
+	sprintf(send_buffer, "%sContent-Disposition: attachment;filename=%s\r\n\r\n", send_buffer, filename);
+	send(client_fd, send_buffer, strlen(send_buffer), 0);
+	int valid_buffer_size = 0;
+	while ((valid_buffer_size = fread(send_buffer, sizeof(char), DEFAULT_SEND_BUFFER, fd)) > 0)
+	{
+		send(client_fd, send_buffer, valid_buffer_size, 0);
+	}
+	fclose(fd);
 	return;
 }
 
 void router(int client_fd, char *method, char *uri, char *buffer, int valid_len)
 {
+	char params[DEFAULT_URI_BUFFER_SIZE];
+	memset(params, 0, sizeof(char) * DEFAULT_URI_BUFFER_SIZE);
+	if (cut_params(uri, params) == -1)
+	{
+		printf("can not parse uri!\n%s\n%s\n", uri, params);
+		simple_format(client_fd, 500);
+		return;
+	}
+	printf("path: %s\nparams: %s\n", uri, params);
 	if (strcmp(uri, "/") == 0)
 	{
 		if (strcmp(method, "GET") != 0)
@@ -224,7 +259,13 @@ void router(int client_fd, char *method, char *uri, char *buffer, int valid_len)
 			simple_format(client_fd, 500);
 		}
 		else
-			homepage(client_fd);
+		{
+			char print_msg[DEFAULT_MSG_BUFFER_SIZE];
+			memset(print_msg, 0, sizeof(char) * DEFAULT_MSG_BUFFER_SIZE);
+			if (get_value(params, "print_msg", print_msg, "&") == -1)
+				strcpy(print_msg, "hello");
+			homepage(client_fd, print_msg);
+		}
 	}
 	else if (strcmp(uri, "/upload") == 0)
 	{
@@ -236,6 +277,17 @@ void router(int client_fd, char *method, char *uri, char *buffer, int valid_len)
 		{
 			file_upload(client_fd, buffer, valid_len);
 		}
+	}
+	else if (strcmp(uri, "/download") == 0)
+	{
+		char filename[DEFAULT_URI_BUFFER_SIZE];
+		if (get_value(params, "filename", filename, "&") == -1)
+		{
+			printf("download parameters error\n");
+			exit(-1);
+		}
+
+		file_download(client_fd, filename);
 	}
 	else
 	{
