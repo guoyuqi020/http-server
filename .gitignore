@@ -5,3 +5,4 @@ Makefile
 CMakeFiles
 *.a
 .vscode
+build
