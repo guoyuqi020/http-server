@@ -35,6 +35,7 @@ void on_accept(int server_fd, short event, void *arg) //消灭僵尸进程 僵�
 			break;
 		handle(client_fd, recv_buffer, n);
 	}
+	//printf("connection_closed\n");
 	close(client_fd);
 }
 int main(int arg, char *argv[])
