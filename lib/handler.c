@@ -110,6 +110,7 @@ void homepage(int client_fd, char *print_msg) {
 	char msg[DEFAULT_MSG_BUFFER_SIZE];
 	status_to_text(status, msg);
 	sprintf(send_buffer, "HTTP/1.1 %d %s\r\n", status, msg);
+	sprintf(send_buffer, "%sConnection: keep-alive\r\n", send_buffer);	//keep-alive
 	sprintf(send_buffer, "%sContent-Length: %ld\r\n", send_buffer, strlen(buff));
 	sprintf(send_buffer, "%sContent-Type:text/html,charset:utf-8;\r\n\r\n", send_buffer);
 	sprintf(send_buffer, "%s%s", send_buffer, buff);
@@ -185,6 +186,7 @@ void file_upload(int client_fd, char *buffer, int valid_len) {
 	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
 	status_to_text(303, msg);
 	sprintf(send_buffer, "HTTP/1.1 %d %s\r\n", 303, msg);
+	sprintf(send_buffer, "%sConnection: keep-alive\r\n", send_buffer);	//keep-alive
 	sprintf(send_buffer, "%sContent-Length: %d\r\n", send_buffer, 0);
 	sprintf(send_buffer, "%sLocation: /?print_msg=upload file \"%s\" success!\r\n\r\n", send_buffer, filename);
 	send(client_fd, send_buffer, strlen(send_buffer), 0);
