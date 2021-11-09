@@ -1,4 +1,5 @@
 #include <safe_connect.h>
+#include <secure.h>
 
 int socket_s(int __domain, int __type, int __protocol)
 {
@@ -11,15 +12,20 @@ int socket_s(int __domain, int __type, int __protocol)
     return server_fd;
 }
 
-ssize_t recv_s(int __fd, void *__buf, size_t __n, int __flags)
+ssize_t recv_s(SSL * __fd, void *__buf, size_t __n, int __flags)
 {
     int recv_len;
-    if ((recv_len = recv(__fd, __buf, __n, __flags)) == -1)
+    //if ((recv_len = recv(__fd, __buf, __n, __flags)) == -1)
+    if ((recv_len = SSL_read(__fd, __buf, __n)) == -1)
     {
         printf("recv failed\n");
         exit(-1);
     }
     return recv_len;
+}
+
+ssize_t send_s(SSL * __fd, void *__buf, size_t __n, int __flags){
+    SSL_write(__fd, __buf, __n);
 }
 
  

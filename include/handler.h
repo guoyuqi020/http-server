@@ -23,5 +23,5 @@
 
 #define min(a, b) ((a < b) ? a : b)
 
-void handle(int fd1, char *url, int valid_len);
+void handle(SSL * fd1, char *url, int valid_len);
 #endif

@@ -5,4 +5,4 @@ include_directories(include)
 add_subdirectory(lib)
 
 add_executable(server server.c)
-target_link_libraries(server handler_lib event)
+target_link_libraries(server handler_lib event ssl crypto)
