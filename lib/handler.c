@@ -117,6 +117,63 @@ void homepage(int client_fd, char *print_msg) {
 	return;
 }
 
+//html for pipeline testing
+void generate_img_html(char *buff, char *msg) {
+	struct FileName *f_head = readFileList("./resources");
+	struct FileName *cur = f_head;
+	sprintf(buff, "%s<!DOCTYPE html>\r\n<html>\r\n\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<title>xx.xx</title>\r\n</head>\r\n\r\n<body>\r\n<p>%s</p><br>\r\n", buff, msg);
+	while (cur != NULL) {
+		char encoded_filename[DEFAULT_FILENAME_LEN * 2];
+		strcpy(encoded_filename, cur->filename);
+		urlencode(encoded_filename);
+		int l = strlen(cur->filename); 
+		if(l >= 4){
+			if((cur->filename[l - 4] == '.' 
+				&& cur->filename[l - 3] == 'p' 
+				&& cur->filename[l - 2] == 'n' 
+				&& cur->filename[l - 1] == 'g') || 
+				(cur->filename[l - 4] == '.' 
+				&& cur->filename[l - 3] == 'j' 
+				&& cur->filename[l - 2] == 'p' 
+				&& cur->filename[l - 1] == 'g') || 
+				(cur->filename[l - 4] == '.' 
+				&& cur->filename[l - 3] == 'i' 
+				&& cur->filename[l - 2] == 'c' 
+				&& cur->filename[l - 1] == 'o')){
+				sprintf(buff, "%s<img src=\"/download?filename=%s\">%s</img>\r\n", buff, cur->filename, cur->filename);
+			}
+		}
+		cur = cur->next;
+	}
+	sprintf(buff, "%s</body>\r\n</html>", buff);
+	//sprintf(buff, "%s<form action=\"/upload\" method=\"post\" enctype=\"multipart/form-data\">\r\n上传文件： <input type=\"file\" name=\"upload\"><br>\r\n<input type=\"submit\">\r\n</form>\r\n</body>\r\n</html>", buff);
+	cur = f_head;
+	while (cur != NULL) {
+		cur = cur->next;
+		free(f_head);
+		f_head = cur;
+	}
+}
+
+//html for pipeline testing
+void imgpage(int client_fd, char *print_msg) {
+	urldecode(print_msg);
+	char send_buffer[DEFAULT_SEND_BUFFER];
+	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
+	char buff[DEFAULT_BUFFER_SIZE];
+	memset(buff, 0, sizeof(char) * DEFAULT_BUFFER_SIZE);
+	generate_img_html(buff, print_msg);
+	int status = 200;
+	char msg[DEFAULT_MSG_BUFFER_SIZE];
+	status_to_text(status, msg);
+	sprintf(send_buffer, "HTTP/1.1 %d %s\r\n", status, msg);
+	sprintf(send_buffer, "%sContent-Length: %ld\r\n", send_buffer, strlen(buff));
+	sprintf(send_buffer, "%sContent-Type:text/html,charset:utf-8;\r\n\r\n", send_buffer);
+	sprintf(send_buffer, "%s%s", send_buffer, buff);
+	send(client_fd, send_buffer, strlen(send_buffer), 0);
+	return;
+}
+
 void file_upload(int client_fd, char *buffer, int valid_len) {
 	char boundary[DEFAULT_MSG_BUFFER_SIZE];
 	char filename[DEFAULT_URI_BUFFER_SIZE];
@@ -315,6 +372,16 @@ void router(int client_fd, char *method, char *uri, char *buffer, int valid_len)
 
 		//file_download_chunked(client_fd, filename);
 		file_download(client_fd, filename);
+	} else if (strcmp(uri, "/img") == 0) {
+		if (strcmp(method, "GET") != 0) {
+			simple_format(client_fd, 500);
+		} else {
+			char print_msg[DEFAULT_MSG_BUFFER_SIZE];
+			memset(print_msg, 0, sizeof(char) * DEFAULT_MSG_BUFFER_SIZE);
+			if (get_value(params, "print_msg", print_msg, "&") == -1)
+				strcpy(print_msg, "hello");
+			imgpage(client_fd, print_msg);
+		}
 	} else {
 		int status = 404;
 		simple_format(client_fd, status);
