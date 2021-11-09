@@ -12,8 +12,57 @@
 #include <arpa/inet.h>
 #include "safe_connect.h"
 #include <event.h>
+#include "pipeline.h"
 
 struct event_base* base;
+
+//divide buffer into several http requests, for pipeline
+char line[DEFAULT_BUFFER_SIZE] = {0};
+int divide_buffer(char* recv_buffer, int l, char * reqs, int * length){
+	int n = -1;
+	int i = 0;
+	int k = 0;
+
+	char method[DEFAULT_BUFFER_SIZE] = {0};
+	sscanf(recv_buffer, "%s ", method);
+	if(strcmp(method, "POST") == 0){
+		for(int t = 0; t < l; t ++)
+			*(reqs + t) = recv_buffer[t];
+		//strcpy(reqs, recv_buffer);
+		length[0] = l;
+		return 1;
+	}
+
+	while(i < l){
+		int j = 0;
+		memset(line, 0, sizeof(char) * DEFAULT_BUFFER_SIZE);
+		while(recv_buffer[i] != '\n'){
+			line[j ++] = recv_buffer[i ++];
+		}
+		i ++;
+		//printf("line: %s\n", line);
+		sscanf(line, "%s ", method);
+		//printf("method: %s\n", method);
+		if(strcmp(method, "GET") == 0){
+			if(n != -1){
+				length[n] = k;
+			}
+			n ++;
+			k = 0;
+			//printf("req start\n");
+		}
+		for(int t = 0; t < j; t ++){
+			//printf("%d, %d, %d\n", n, k, t);
+			*(reqs + N_REQ * n + (k ++)) = line[t];
+		}
+		*(reqs + N_REQ * n + (k ++)) = '\n';
+	}
+	length[n] = k;
+	return n + 1;
+}
+
+char reqs[N_REQ][DEFAULT_BUFFER_SIZE] = {0};
+
 void on_accept(int server_fd, short event, void *arg) //消灭僵尸进程 僵尸进程会占用资源如果一直不释放的话
 {
 	struct sockaddr_in client_addr;
@@ -27,13 +76,28 @@ void on_accept(int server_fd, short event, void *arg) //消灭僵尸进程 僵�
 	{
 		perror("accept failed:");
 	}
+
 	while (1)
 	{
 		memset(recv_buffer, 0, sizeof(char) * DEFAULT_RECV_BUFFER);
 		n = recv_s(client_fd, recv_buffer, DEFAULT_RECV_BUFFER, 0);
 		if (n == 0)
 			break;
-		handle(client_fd, recv_buffer, n);
+		/*printf("\nbuffer: len: %d, n : %d\n---------------------------------------\n%s\n", 
+			strlen(recv_buffer), n, recv_buffer);
+		*/
+		int n_buffer;
+		int li[N_REQ] = {0};
+		
+		memset(reqs, 0, sizeof(char) * N_REQ * DEFAULT_BUFFER_SIZE);
+		n_buffer = divide_buffer(recv_buffer, n, &reqs[0][0], li);
+
+		for(int i = 0; i < n_buffer; i ++){
+			//printf("%d: %d\n", li[i], n);
+			handle(client_fd, reqs[i], li[i]);
+			//handle(client_fd, recv_buffer, n);
+		}
+		//handle(client_fd, recv_buffer, n);
 	}
 	//printf("connection_closed\n");
 	close(client_fd);
