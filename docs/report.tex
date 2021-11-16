@@ -1,0 +1,179 @@
+\documentclass[a4paper]{article}
+\usepackage[left=2cm, right=2cm, top=0.8in, bottom=1.0in]{geometry}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\usepackage{indentfirst}
+\usepackage{setspace}
+\usepackage{paralist}
+\usepackage{fancyhdr}
+\usepackage[ruled, linesnumbered]{algorithm2e}
+\usepackage{setspace}
+\usepackage[backref]{hyperref}
+\usepackage{amsthm,amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{listings,xcolor}
+\usepackage{inconsolata}
+\usepackage{tikz,forest}
+\usepackage{caption, subcaption, amsfonts, dcolumn}
+\usepackage{booktabs, multirow, bigstrut, makecell}
+\usepackage{lscape}
+\definecolor{mygreen}{rgb}{0,0.6,0}  
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}  
+\definecolor{mymauve}{rgb}{0.58,0,0.82}  
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{计算机算法设计与分析第六次作业 \quad 郭宇祺 \quad 202118015059010} %页眉
+\fancyfoot[C]{\thepage}
+\let\itemize\compactitem
+\let\enditemize\endcompactitem
+\let\enumerate\compactenum
+\let\endenumerate\endcompactenum
+\let\description\compactdesc
+\let\enddescription\endcompactdesc
+\setstretch{1.35} 
+\setlength{\parindent}{2em} 
+\setmainfont{Times New Roman}
+\setCJKmainfont[BoldFont={黑体}, ItalicFont={楷体}]{宋体}
+\setCJKsansfont{黑体}
+\setCJKmonofont{仿宋}
+\renewcommand{\arraystretch}{1.3}
+\renewcommand{\figurename}{图}
+\renewcommand{\thesubfigure}{(\alph{subfigure})}
+
+
+\lstset{ %  
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}  
+  basicstyle=\footnotesize\setstretch{1}\setmainfont{Courier New}\bfseries ,        % the size of the fonts that are used for the code  
+  breakatwhitespace=true,         % sets if automatic breaks should only happen at whitespace  
+  breaklines=true,                 % sets automatic line breaking  
+  captionpos=bl,                    % sets the caption-position to bottom  
+  commentstyle=\color{mygreen},    % comment style  
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code  
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8  
+  frame=single,                    % adds a frame around the code  
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)  
+  keywordstyle=\color{blue},       % keyword style  
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)  
+  numbersep=5pt,                   % how far the line-numbers are from the code  
+  numberstyle=\tiny\color{mygray}, % the style that is used for the line-numbers  
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))  
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'  
+  showstringspaces=false,          % underline spaces within strings only  
+  showtabs=false,                  % show tabs within strings adding particular underscores  
+  stepnumber=1,                    % the step between two line-numbers. If it's 1, each line will be numbered  
+  stringstyle=\color{orange},     % string literal style  
+  tabsize=2,                       % sets default tabsize to 2 spaces  
+}  
+\newtheorem{theorem}{定理}
+\begin{document} 
+\title{计算机算法设计与分析第六次作业}
+\author{姓名：郭宇祺 \quad 学号：202118015059010}
+\date{}
+\maketitle
+\normalsize
+\section*{一、}
+\subsection*{1.}
+2SAT：给定布尔变量的一个有限集合$U=\{u_1, u_2, u_3, \dots, u_n\}$，以及其上的逻辑语句$C=C_1 \wedge C_2 \wedge \dots \wedge C_m$，其中$\left\lvert C_i\right\rvert=2, i=1, 2, \dots, m$，求问是否存在一个$U$的赋值，使得$C$为真。
+
+\begin{theorem}
+  $2SAT$问题是$P$-类问题
+\end{theorem}
+\begin{proof}[证明]
+  如果$\left\lvert U\right\rvert=1$，那么显然可以在多项式时间内完成判定。
+  如果$\left\lvert U\right\rvert \geq 2$，可以进行如下操作。首先，如果语句$C$中存在形如$u_i \vee \overline{u}_i$的子句，他们的存在不对$C$的值构成任何影响，因此可以从$C$中去掉这些冗余的子句。其次，假设$\left\lvert U\right\rvert=n$，$C=C^* \wedge \bigwedge (u_n \vee y_j) \wedge \bigwedge (\overline{u}_n \vee z_k)$，其中$C^*$表示所有不包含变量$u_n$和$\overline{u}_n$的子句构成的集合，$\bigwedge (u_n \vee y_j)$表示所有包含变量$u_n$的子句的集合，$\bigwedge (\overline{u}_n \vee z_k)$表示所有包含变量$\overline{u}_n$的子句的集合。构造如下一个不包含变量$u_n$和$\overline{u}_n$的新语句$C'=C^* \wedge \bigwedge (y_j \vee z_k)$。下证明，$C$是可满足的当且仅当$C'$是可满足的。
+
+  如果存在一个赋值，使得$C$值为真，那么在这个赋值下$C'$也一定为真。首先，在这个赋值下$C^*$的值必为真。其次，如果在这个赋值中$\overline{u}_n=1$，那么必有$z_k=1$，因此$\bigwedge (y_j \vee z_k)$的值也为真，因此$C'$的值也为真。如果在这个赋值中$\overline{u}_n=0$，可同理推出$C'$的值为真。因此$C\text{可满足} \Rightarrow C'\text{可满足}$。
+
+  如果存在一个赋值，使得$C'$为真，那么可以以这个赋值为基础构造$C$的成真赋值。首先，在这个赋值下$C^*$的值必为真。如果在这个赋值中，有任意一个$y_j=0$，那么必有任意的$z_k=1$，此时取$u_n=1$，即可满足$C=1$。如果在这个赋值中所有$y_j=1$，那么可取$u_n=0$，同样可满足$C=1$，因此$C'\text{可满足} \Rightarrow C\text{可满足}$。
+
+  $C$可在多项式时间内转化为$C'$。首先去除所有形如$u_i \vee \overline{u}_i$的子句，这一步只需对输入语句进行一遍扫描，耗时显然是多项式时间的。随后构造$\bigwedge (y_j \vee z_k)$，由于$y_j$和$z_k$的个数均不超过$2n$个，因此$\bigwedge (y_j \vee z_k)$最多含有$4n^2$个子句，其构造也是多项式时间的。因此$C$可在多项式时间内转化为$C'$。每经过一次这样的转化，布尔变量的个数就减少一个，至多进行$n$次转化，布尔变量的个数就会减少为一个，转化总耗时显然是多项式时间的。一个布尔变量的2SAT问题是$P$-类问题，因此多个布尔变量的2SAT问题也是$P$-类问题。
+\end{proof}
+
+\subsection*{2.}
+\begin{theorem}
+  相遇集问题是NPC问题
+\end{theorem}
+\begin{proof}[证明]
+  限制$\left\lvert C\right\rvert=2$的情况。对于如下的顶点覆盖问题，构造对应的相遇集问题。对于图$G$中每一个节点$v_i$，集合$S$中存在一个对应的元素$x_i$。对于图$G$中每一条$\langle v_i, v_j \rangle$的边，子集族$C$中存在一个对应子集$\{x_i, x_j\}$。求问，是否存在一个规模小于等于K的相遇集$S'$。下证明，图$G$存在顶点覆盖当且仅当集合$S$存在相遇集。
+
+  如果图$G$存在一个顶点覆盖集合$V=\{x_{k_1}, x_{k_2}, \dots, x_{k_m}\}$，$m\leq K$，那么显然对于图$G$中的每一条边，$V$中至少包含其两个端点中的一个。由于图$G$的每一条边对应子集族$C$中的一个子集，因此存在一个子集$S'=\{v_{k_1}, v_{k_2}, \dots, v_{k_m}\}$，$m\leq K$，使得$S'$与$C$的每一个子集的交都不为空。$S'$就是一个满足条件的相遇集。
+
+  同理，如果存在一个子集$S'=\{v_{k_1}, v_{k_2}, \dots, v_{k_m}\}$，$m\leq K$，使得$S'$与$C$的每一个子集的交都不为空，那么存在一个顶点集合$V=\{x_{k_1}, x_{k_2}, \dots, x_{k_m}\}$，$m\leq K$，对于每一条边，$V$都至少包含其两个端点中的一个，因此$V$是一个满足条件的顶点覆盖。
+
+  已知顶点覆盖问题是NPC问题。易知相遇集问题在给定一个猜测的情况下，总是可以在多项式时间内完成验证，因此相遇集问题是NP问题。综上所述，在限制$\left\lvert C\right\rvert=2$的条件下，相遇集问题是NPC问题。那么，不存在此限制的相遇集问题也是NPC问题。
+\end{proof}
+
+\subsection*{3.}
+\begin{theorem}
+  0/1整数规划问题是NPC问题
+\end{theorem}
+\begin{proof}[证明]
+  限制$m=1$，对于如下的0/1背包问题的判定问题，构造相应的0/1整数规划问题。假设在0/1背包问题的判定问题中存在这样一个实例，存在这样的$n$件物品，其重量分别为$w_1, w_2, \dots, w_n$，价值分别为$p_1, p_2, \dots, p_n$，总容量为$W$，求问是否存在一种选择，使得背包中物品总价值大于等于$P$。构造这样的0/1整数规划问题，令$A=[w_1, w_2, \dots, w_n]$，$b=W$，$C=[p_1, p_2, \dots, p_n]$，$D=P$。下证明，0/1背包问题的判定问题存在解当且仅当对应的0/1整数规划问题存在解。
+
+  如果0/1背包问题的判定问题存在解，那么令$x_i$表示是否选取第$i$件物品，选取则$x_i=1$，否则$x_i$=0。0/1背包问题的容量约束为$w_1x_1+w_2x_2+\dots+w_nx_n\leq W$，价值约束为$p_1x_1+p_2x_2+\dots+p_nx_n\geq P$。根据问题的构造，显然有$Ax\leq b$，$C^Tx\geq D$，即这样的赋值也满足0/1整数规划问题的要求，因此$\{x_i\}$也是0/1整数规划问题的解。
+
+  如果0/1整数规划问题存在解$\{x_i\}$，那么这个对$\{x_i\}$的赋值满足$A_1x_1+A_2x_2+\dots+A_nx_n\leq b$，也满足$C_1x_1+C_2x_2+\dots+C_nx_n\geq D$。这两个约束分别使得0/1背包问题的判定问题的容量约束和价值约束得到满足，因此$\{x_i\}$也是0/1背包问题的判定问题的一个解。
+
+  已知0/1背包问题的判定问题是NPC问题。易知对于0/1整数规划问题，在给定一个猜想的情况下，其总是可在多项式时间内验证的，因此它是一个$NP$-类问题。综上所述，限制$m=1$的0/1整数规划问题是NPC问题，因此，不限制$m=1$的0/1整数规划问题也是NPC问题。
+\end{proof}
+
+\subsection*{5.}
+\begin{theorem}
+  k-独立集问题是NPC问题
+\end{theorem}
+\begin{proof}[证明]
+  对于如下的顶点覆盖问题，构造对应的k-独立集问题。假设存在图$G$，顶点覆盖问题问是否存在一个顶点个数小于等于$k$的顶点覆盖，其中$n$是图$G$中的顶点个数，对应的k-独立集合问题则问是否存在一个包含$n-k$个顶点的独立集。下证明存在这样的顶点覆盖当且仅当k-独立集问题有解。
+
+  如果顶点覆盖问题存在解，那么必然存在一个顶点个数为$k$的顶点覆盖解$V$。令$V'=V(G)\setminus V$表示图$G$中所有在集合$V$之外的顶点的集合。显然对于集合$V'$中的顶点，他们两两之间不可能有边，否则这条边将无法被顶点集合$V$所覆盖。因此，集合$V'$就构成了k-独立集问题的一个解。
+
+  如果k-独立集问题存在解$V'$，取$V=V(G)\setminus V'$。由于$V'$是一个独立集，其中的顶点两两之间不存在边，而集合$V$包括了集合$V'$之外的所有顶点，因此$V$必然能够覆盖图$G$中的所有边，因此$V$是顶点覆盖问题的一个解。
+
+  已知顶点覆盖问题是NPC问题。易知对于k-独立集问题，给定一个k-独立集的猜想，总是能够在多项式时间内验证其是否成立，因此k-独立集问题是$NP$-类问题。综上所述，k-独立集问题是NPC问题。
+\end{proof}
+
+\subsection*{6.}
+\begin{theorem}
+  已知Hamilton圈问题是NPC问题，证明TSP判定问题是NPC问题
+\end{theorem}
+\begin{proof}[证明]
+  对于一个给定的图$G$，Hamilton圈问题问是否存在一条Hamilton回路。如下构造对应的TSP判定问题的图$G'$。图$G'$具有与图$G$相同的顶点。在图$G$中，如果边$\langle a, b \rangle$存在，则图$G'$中边$\langle a, b \rangle$的距离设置为1，否则距离设置为2。TSP判定问题问，是否存在一条总距离小于等于$V(G')$的回路，其中$V(G')$等于图$G'$中顶点的个数。。下证明，Hamilton圈问题存在解当且仅当TSP问题存在解。
+
+  如果Hamilton圈问题有解，即存在一条回路$v_{k_1} \rightarrow v_{k_2} \dots v_{k_n} \rightarrow v_{k_1}$，那么在TSP问题中，这条回路的总距离为$V(G')$，满足要求，因此这条回路也是TSP问题的一个解。
+
+  如果TSP问题有解，即存在一条回路$v_{k_1} \rightarrow v_{k_2} \dots v_{k_n} \rightarrow v_{k_1}$，那么这一条回路上的所有边距离都为1，因此在图$G$中这些边都存在。那么在Hamilton圈问题中，这条回路也是有效的，因此它也是Hamilton圈问题的一个解。
+
+  已知Hamilton圈问题是一个NPC问题。易知对于TSP判定问题，给定一个回路猜想，总是可以在多项式时间内完成验证，因此TSP判定问题是一个$NP$-类问题。综上所述，TSP判定问题是一个NPC问题。
+\end{proof}
+
+\subsection*{7.}
+\begin{theorem}
+  证明0/1背包问题是NP难问题，但不是NPC问题。
+\end{theorem}
+\begin{proof}[证明]
+  易知0/1背包的判定问题总是可以通过求解0/1背包问题来回答，因此0/1背包问题一定不比其判定问题容易。已知0/1背包的判定问题是NPC问题，所以0/1背包问题是NP难问题。又易知给定一个猜想，0/1背包问题想要确定该猜想是否是价值最大的一种装法，必须遍历搜索所有物品装法并与之比较，耗时$O(2^n)$，显然不可能在多项式时间内完成。因此0/1背包问题不是$NP$-类算法。综上所述，0/1背包问题是NP难问题，但不是NPC问题。
+\end{proof}
+
+\subsection*{8.}
+NPC问题显然都是NP难问题。NP难问题要求该问题比所有NP问题更难，而NPC问题的定义就是在所有NP问题中最难的问题，其显然难于所有NP问题，符合NP难问题的要求。
+
+
+\section*{二、}
+\subsection*{1.}
+\subsubsection*{(1)}
+\input{algorithm2_1.tex}
+算法伪代码如算法\ref{alg:2.1}所示。此算法共执行$n+1$次循环，每一次循环内部固定执行一次加法和一次乘法，因此算法的时间复杂度始终为$\Theta(n)$。
+\subsubsection*{(2)}
+为了计算这个多项式的值，至少需要计算出每一个项$\{a_ix^i\}$的值，然后累加起来。$n$次多项式共有$n+1$个项，累加至少需要进行$n$次加法计算。因此任何基于求值的算法，其时间复杂度都至少为$\Omega(n)$。
+
+\subsection*{2.}
+\subsubsection*{(1)}
+任给一个无向图$G$，问其中是否存在一条长度大于等于$L$的初级回路。
+\subsubsection*{(2)}
+任给无向图$G=\langle V, E \rangle$，给$G$的每一个顶点涂一种颜色，要求任一条边的两个端点颜色都不相同，问是否存在一种使用颜色数量小于等于$C$的涂色方案。
+
+\subsection*{3.}
+\subsubsection*{(1)}
+给定一个对于初级回路的猜想，可以在$O(n)$的时间内检查出其是否是一条初级回路，然后可以在$O(1)$的时间内判断该回路长度是否满足要求。因此总是可以在多项式时间内验证其是否是一条初级回路，此判定问题显然是$NP$-类问题。
+\subsubsection*{(2)}
+给定一个涂色方案的猜想，可以在$O(n)$的时间内判断该涂色方案使用的颜色数量是否满足要求，随后遍历每一条边，可在$O(n^2)$的时间内判断该涂色方案是否保证每一条边两端点的颜色都不相同。因此总是可以在多项式时间内验证其是否是一种满足要求的涂色方案，此判定问题显然是$NP$-类问题。
+\end{document}
