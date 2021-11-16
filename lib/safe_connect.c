@@ -25,7 +25,7 @@ ssize_t recv_s(SSL * __fd, void *__buf, size_t __n, int __flags)
 }
 
 ssize_t send_s(SSL * __fd, void *__buf, size_t __n, int __flags){
-    SSL_write(__fd, __buf, __n);
+    return SSL_write(__fd, __buf, __n);
 }
 
  

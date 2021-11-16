@@ -1,5 +1,5 @@
-#ifndef _HANDLER_H_
-#define _HANDLER_H_
+#ifndef _SERVER_HANDLER_H_
+#define _SERVER_HANDLER_H_
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
@@ -16,9 +16,9 @@
 #define DEFAULT_MSG_BUFFER_SIZE 256
 #define DEFAULT_URI_BUFFER_SIZE 1024
 #define DEFAULT_HEADER_LEN 2048
-#define DEFAULT_RECV_BUFFER 4096 * 10
-#define DEFAULT_SEND_BUFFER 4096 * 10
-#define DEFAULT_BUFFER_SIZE 2 * DEFAULT_RECV_BUFFER
+#define DEFAULT_RECV_BUFFER_SIZE 4096 * 10
+#define DEFAULT_SEND_BUFFER_SIZE 4096 * 10
+#define DEFAULT_BUFFER_SIZE 2 * DEFAULT_RECV_BUFFER_SIZE
 #define DEFAULT_RESOURCE_DIR "./resources/"
 
 #define min(a, b) ((a < b) ? a : b)

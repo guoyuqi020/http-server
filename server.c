@@ -7,68 +7,78 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <signal.h>
-#include "handler.h"
 #include <string.h>
 #include <arpa/inet.h>
+
+#include "server_handler.h"
 #include "safe_connect.h"
 #include <event.h>
 #include "pipeline.h"
-#include "secure.h"
 
 //divide buffer into several http requests, for pipeline
-char line[DEFAULT_BUFFER_SIZE] = {0};
-int divide_buffer(char* recv_buffer, int l, char * reqs, int * length){
+
+int divide_buffer(char *recv_buffer, int l, char reqs[N_REQ][DEFAULT_RECV_BUFFER_SIZE], int *length, int *rest_len)
+{
 	int n = -1;
 	int i = 0;
 	int k = 0;
 
 	char method[DEFAULT_BUFFER_SIZE] = {0};
 	sscanf(recv_buffer, "%s ", method);
-	if(strcmp(method, "POST") == 0){
-		for(int t = 0; t < l; t ++)
-			*(reqs + t) = recv_buffer[t];
+	if (strcmp(method, "POST") == 0)
+	{
+		memcpy(reqs[0], recv_buffer, l);
 		length[0] = l;
 		return 1;
 	}
-
-	while(i < l){
-		int j = 0;
-		memset(line, 0, sizeof(char) * DEFAULT_BUFFER_SIZE);
-		while(recv_buffer[i] != '\n'){
-			line[j ++] = recv_buffer[i ++];
-		}
-		i ++;
-		sscanf(line, "%s ", method);
-		if(strcmp(method, "GET") == 0){
-			if(n != -1){
-				length[n] = k;
+	char line[DEFAULT_BUFFER_SIZE] = {0};
+	// must be GET
+	char *startpos = recv_buffer, *endpos = recv_buffer;
+	char *req_startpos = recv_buffer;
+	while (n < N_REQ && startpos - recv_buffer <= l && (endpos = strstr(startpos, "\n")) != NULL)
+	{
+		endpos += 1;
+		sscanf(startpos, "%s ", method);
+		if (strcmp(method, "GET") == 0)
+		{
+			// a new GET request!
+			if (n >= 0)
+			{
+				memset(reqs[n], 0, sizeof(char) * DEFAULT_RECV_BUFFER_SIZE);
+				length[n] = startpos - req_startpos;
+				memcpy(reqs[n], req_startpos, length[n]);
+				*rest_len = recv_buffer + l - startpos;
 			}
-			n ++;
-			k = 0;
+			req_startpos = startpos;
+			n += 1;
 		}
-		for(int t = 0; t < j; t ++){
-			*(reqs + N_REQ * n + (k ++)) = line[t];
-		}
-		*(reqs + N_REQ * n + (k ++)) = '\n';
+
+		startpos = endpos;
 	}
-	length[n] = k;
-	return n + 1;
+	if (n < N_REQ)
+	{
+		memset(reqs[n], 0, sizeof(char) * DEFAULT_RECV_BUFFER_SIZE);
+		length[n] = recv_buffer + l - req_startpos;
+		memcpy(reqs[n], req_startpos, length[n]);
+		*rest_len = 0;
+		n += 1;
+	}
+	return n;
 }
 
-char reqs[N_REQ][DEFAULT_BUFFER_SIZE] = {0};
-
-struct event_base* base;
+struct event_base *base;
 
 SSL_CTX *ctx;
-
 
 void on_accept(int server_fd, short event, void *arg) //消灭僵尸进程 僵尸进程会占用资源如果一直不释放的话
 {
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_size = sizeof(client_addr);
 	int client_fd;
-	char recv_buffer[DEFAULT_RECV_BUFFER];
+	char recv_buffer[DEFAULT_RECV_BUFFER_SIZE];
 	int n;
+	char reqs[N_REQ][DEFAULT_RECV_BUFFER_SIZE] = {0};
+	int recv_rest = 0;
 	// read_ev must allocate from heap memory, otherwise the program would crash from segmant fault
 	if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
 							&client_addr_size)) == -1)
@@ -76,42 +86,45 @@ void on_accept(int server_fd, short event, void *arg) //消灭僵尸进程 僵�
 		perror("accept failed:");
 	}
 
-	SSL * ssl = SSL_new(ctx);
-    SSL_set_fd(ssl, client_fd);
+	SSL *ssl = SSL_new(ctx);
+	SSL_set_fd(ssl, client_fd);
 
-    if (SSL_accept(ssl) <= 0) {
-        perror("ssl accept failed:");
-    }
-
+	if (SSL_accept(ssl) <= 0)
+	{
+		perror("ssl accept failed:");
+	}
+	memset(recv_buffer, 0, sizeof(char) * DEFAULT_RECV_BUFFER_SIZE);
 	while (1)
 	{
-		memset(recv_buffer, 0, sizeof(char) * DEFAULT_RECV_BUFFER);
 
-		n = recv_s(ssl, recv_buffer, DEFAULT_RECV_BUFFER, 0);
+		n = recv_s(ssl, recv_buffer + recv_rest, DEFAULT_RECV_BUFFER_SIZE - recv_rest, 0);
 		if (n == 0)
 			break;
-		
-		int n_buffer;
-		int li[N_REQ] = {0};
-		
-		memset(reqs, 0, sizeof(char) * N_REQ * DEFAULT_BUFFER_SIZE);
-		n_buffer = divide_buffer(recv_buffer, n, &reqs[0][0], li);
 
-		for(int i = 0; i < n_buffer; i ++){
-			handle(ssl, reqs[i], li[i]);
+		int n_buffer;
+		int req_len[N_REQ] = {0};
+
+		memset(reqs, 0, sizeof(char) * N_REQ * DEFAULT_RECV_BUFFER_SIZE);
+		n_buffer = divide_buffer(recv_buffer, n, reqs, req_len, &recv_rest);
+
+		for (int i = 0; i < n_buffer; i++)
+		{
+			handle(ssl, reqs[i], req_len[i]);
 		}
+		memmove(recv_buffer, recv_buffer + n - recv_rest, recv_rest);
 	}
 	SSL_shutdown(ssl);
-    SSL_free(ssl);
+	SSL_free(ssl);
 
 	close(client_fd);
 }
 
-int main(int arg, char *argv[]){
-    init_openssl();
-    
-    ctx = create_context();
-    configure_context(ctx);
+int main(int arg, char *argv[])
+{
+	init_openssl();
+
+	ctx = create_context();
+	configure_context(ctx);
 
 	int server_fd;
 	struct sockaddr_in server_addr;
@@ -137,9 +150,9 @@ int main(int arg, char *argv[]){
 	// signal(SIGCHLD, sig_child);
 	printf("------------waiting for client -----------\n");
 	struct event listen_ev;
-    base = event_base_new();
-    event_set(&listen_ev, server_fd, EV_READ|EV_PERSIST, on_accept, NULL);
-    event_base_set(base, &listen_ev);
-    event_add(&listen_ev, NULL);
-    event_base_dispatch(base);
+	base = event_base_new();
+	event_set(&listen_ev, server_fd, EV_READ | EV_PERSIST, on_accept, NULL);
+	event_base_set(base, &listen_ev);
+	event_add(&listen_ev, NULL);
+	event_base_dispatch(base);
 }

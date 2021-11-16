@@ -1,4 +1,4 @@
-#include "handler.h"
+#include "server_handler.h"
 #include "findfiles.h"
 #include "chunk.h"
 #include "safe_connect.h"
@@ -9,8 +9,10 @@ char v2[100];
 char value2[200];
 int filed1;
 
-void status_to_text(int status, char *msg) {
-	switch (status) {
+void status_to_text(int status, char *msg)
+{
+	switch (status)
+	{
 	case 200:
 		strcpy(msg, "ok");
 		break;
@@ -41,9 +43,11 @@ void status_to_text(int status, char *msg) {
 	}
 	return;
 }
-int cut_params(char *uri, char *params) {
+int cut_params(char *uri, char *params)
+{
 	char *start_pos;
-	if ((start_pos = strstr(uri, "?")) == NULL) {
+	if ((start_pos = strstr(uri, "?")) == NULL)
+	{
 		return 0;
 	}
 	strcpy(params, start_pos + 1);
@@ -54,9 +58,11 @@ int cut_params(char *uri, char *params) {
 
 // Returns 0 if it finds "boundary" in buffer, and copies it into value.
 // Else it returns -1.
-int get_value(char *buffer, const char *key, char *value, char *end_str) {
+int get_value(char *buffer, const char *key, char *value, char *end_str)
+{
 	char *pos;
-	if ((pos = strstr(buffer, key)) != NULL) {
+	if ((pos = strstr(buffer, key)) != NULL)
+	{
 		char *start_pos = pos + strlen(key) + 1;
 		char *end_pos = strstr(start_pos, end_str);
 		int value_len = end_pos - start_pos;
@@ -67,10 +73,11 @@ int get_value(char *buffer, const char *key, char *value, char *end_str) {
 	return -1;
 }
 
-void simple_format(SSL * client_fd, int status) {
+void simple_format(SSL *client_fd, int status)
+{
 	char msg[DEFAULT_MSG_BUFFER_SIZE];
-	char send_buffer[DEFAULT_SEND_BUFFER];
-	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
+	char send_buffer[DEFAULT_SEND_BUFFER_SIZE];
+	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
 	status_to_text(status, msg);
 	sprintf(send_buffer, "HTTP/1.1 %d %s\r\n", status, msg);
 	sprintf(send_buffer, "%sConnection: keep-alive\r\n", send_buffer); //keep-alive
@@ -80,11 +87,13 @@ void simple_format(SSL * client_fd, int status) {
 	return;
 }
 
-void generate_html(char *buff, char *msg) {
+void generate_html(char *buff, char *msg)
+{
 	struct FileName *f_head = readFileList("./resources");
 	struct FileName *cur = f_head;
 	sprintf(buff, "%s<!DOCTYPE html>\r\n<html>\r\n\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<title>xx.xx</title>\r\n</head>\r\n\r\n<body>\r\n<p>%s</p><br>\r\n", buff, msg);
-	while (cur != NULL) {
+	while (cur != NULL)
+	{
 		char encoded_filename[DEFAULT_FILENAME_LEN * 2];
 		strcpy(encoded_filename, cur->filename);
 		urlencode(encoded_filename);
@@ -93,17 +102,19 @@ void generate_html(char *buff, char *msg) {
 	}
 	sprintf(buff, "%s<form action=\"/upload\" method=\"post\" enctype=\"multipart/form-data\">\r\n上传文件： <input type=\"file\" name=\"upload\"><br>\r\n<input type=\"submit\">\r\n</form>\r\n</body>\r\n</html>", buff);
 	cur = f_head;
-	while (cur != NULL) {
+	while (cur != NULL)
+	{
 		cur = cur->next;
 		free(f_head);
 		f_head = cur;
 	}
 }
 
-void homepage(SSL * client_fd, char *print_msg) {
+void homepage(SSL *client_fd, char *print_msg)
+{
 	urldecode(print_msg);
-	char send_buffer[DEFAULT_SEND_BUFFER];
-	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
+	char send_buffer[DEFAULT_SEND_BUFFER_SIZE];
+	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
 	char buff[DEFAULT_BUFFER_SIZE];
 	memset(buff, 0, sizeof(char) * DEFAULT_BUFFER_SIZE);
 	generate_html(buff, print_msg);
@@ -120,28 +131,23 @@ void homepage(SSL * client_fd, char *print_msg) {
 }
 
 //html for pipeline testing
-void generate_img_html(char *buff, char *msg) {
+void generate_img_html(char *buff, char *msg)
+{
 	struct FileName *f_head = readFileList("./resources");
 	struct FileName *cur = f_head;
 	sprintf(buff, "%s<!DOCTYPE html>\r\n<html>\r\n\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<title>xx.xx</title>\r\n</head>\r\n\r\n<body>\r\n<p>%s</p><br>\r\n", buff, msg);
-	while (cur != NULL) {
+	while (cur != NULL)
+	{
 		char encoded_filename[DEFAULT_FILENAME_LEN * 2];
 		strcpy(encoded_filename, cur->filename);
 		urlencode(encoded_filename);
 		int l = strlen(cur->filename);
-		if(l >= 4) {
-			if((cur->filename[l - 4] == '.'
-			        && cur->filename[l - 3] == 'p'
-			        && cur->filename[l - 2] == 'n'
-			        && cur->filename[l - 1] == 'g') ||
-			        (cur->filename[l - 4] == '.'
-			         && cur->filename[l - 3] == 'j'
-			         && cur->filename[l - 2] == 'p'
-			         && cur->filename[l - 1] == 'g') ||
-			        (cur->filename[l - 4] == '.'
-			         && cur->filename[l - 3] == 'i'
-			         && cur->filename[l - 2] == 'c'
-			         && cur->filename[l - 1] == 'o')) {
+		if (l >= 4)
+		{
+			if ((cur->filename[l - 4] == '.' && cur->filename[l - 3] == 'p' && cur->filename[l - 2] == 'n' && cur->filename[l - 1] == 'g') ||
+				(cur->filename[l - 4] == '.' && cur->filename[l - 3] == 'j' && cur->filename[l - 2] == 'p' && cur->filename[l - 1] == 'g') ||
+				(cur->filename[l - 4] == '.' && cur->filename[l - 3] == 'i' && cur->filename[l - 2] == 'c' && cur->filename[l - 1] == 'o'))
+			{
 				sprintf(buff, "%s<img src=\"/download?filename=%s\">%s</img>\r\n", buff, cur->filename, cur->filename);
 			}
 		}
@@ -149,7 +155,8 @@ void generate_img_html(char *buff, char *msg) {
 	}
 	sprintf(buff, "%s</body>\r\n</html>", buff);
 	cur = f_head;
-	while (cur != NULL) {
+	while (cur != NULL)
+	{
 		cur = cur->next;
 		free(f_head);
 		f_head = cur;
@@ -157,10 +164,11 @@ void generate_img_html(char *buff, char *msg) {
 }
 
 //html for pipeline testing
-void imgpage(SSL * client_fd, char *print_msg) {
+void imgpage(SSL *client_fd, char *print_msg)
+{
 	urldecode(print_msg);
-	char send_buffer[DEFAULT_SEND_BUFFER];
-	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
+	char send_buffer[DEFAULT_SEND_BUFFER_SIZE];
+	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
 	char buff[DEFAULT_BUFFER_SIZE];
 	memset(buff, 0, sizeof(char) * DEFAULT_BUFFER_SIZE);
 	generate_img_html(buff, print_msg);
@@ -175,7 +183,8 @@ void imgpage(SSL * client_fd, char *print_msg) {
 	return;
 }
 
-void file_upload(SSL * client_fd, char *buffer, int valid_len) {
+void file_upload(SSL *client_fd, char *buffer, int valid_len)
+{
 	char boundary[DEFAULT_MSG_BUFFER_SIZE];
 	char filename[DEFAULT_URI_BUFFER_SIZE];
 	char content_len_str[DEFAULT_MSG_BUFFER_SIZE];
@@ -188,10 +197,13 @@ void file_upload(SSL * client_fd, char *buffer, int valid_len) {
 	content_len = atoi(content_len_str);
 	char file_buffer[DEFAULT_BUFFER_SIZE];
 	memset(file_buffer, 0, DEFAULT_BUFFER_SIZE);
-	if (strstr(buffer, "\r\n\r\n") + 4 == buffer + valid_len) {
-		recv_len = recv_s(client_fd, file_buffer, DEFAULT_RECV_BUFFER, 0);
+	if (strstr(buffer, "\r\n\r\n") + 4 == buffer + valid_len)
+	{
+		recv_len = recv_s(client_fd, file_buffer, DEFAULT_RECV_BUFFER_SIZE, 0);
 		file_buffer_valid_len = recv_len;
-	} else {
+	}
+	else
+	{
 		char *content_start_pos = strstr(buffer, "\r\n\r\n") + 4;
 		recv_len = buffer + valid_len - content_start_pos;
 		memcpy(file_buffer, content_start_pos, recv_len);
@@ -211,7 +223,8 @@ void file_upload(SSL * client_fd, char *buffer, int valid_len) {
 	FILE *fd = fopen(filepath, "wb+");
 
 	file_start_pos = strstr(file_buffer, "\r\n\r\n");
-	if (file_start_pos == NULL) {
+	if (file_start_pos == NULL)
+	{
 		printf("Error: can not find fild startpos\n");
 		exit(-1);
 	}
@@ -219,19 +232,21 @@ void file_upload(SSL * client_fd, char *buffer, int valid_len) {
 	file_buffer_valid_len = file_buffer + file_buffer_valid_len - file_start_pos;
 	memmove(file_buffer, file_start_pos, file_buffer_valid_len);
 	printf("%d/%d/%d\n", recv_len, content_len, file_buffer_valid_len);
-	while (recv_len < content_len) {
+	while (recv_len < content_len)
+	{
 		printf("%d/%d\n", recv_len, content_len);
-		int cur_recv_len = recv_s(client_fd, file_buffer + file_buffer_valid_len, min(DEFAULT_RECV_BUFFER, content_len - recv_len), 0);
+		int cur_recv_len = recv_s(client_fd, file_buffer + file_buffer_valid_len, min(DEFAULT_RECV_BUFFER_SIZE, content_len - recv_len), 0);
 		recv_len += cur_recv_len;
 		file_buffer_valid_len += cur_recv_len;
 		printf("recv:%d content:%d valid:%d\n", recv_len, content_len, file_buffer_valid_len);
-		if (recv_len < content_len) {
-			// just receive DEFAULT_RECV_BUFFER bytes.
-			// write DEFAULT_RECV_BUFFER bytes from file buffer to file.
+		if (recv_len < content_len)
+		{
+			// just receive DEFAULT_RECV_BUFFER_SIZE bytes.
+			// write DEFAULT_RECV_BUFFER_SIZE bytes from file buffer to file.
 			// !!! NOTE !!!
-			// the recv function may not receive DEFAULT_RECV_BUFFER bytes.
-			// use min(DEFAULT_RECV_BUFFER, file_buffer_valid_len) instead.
-			int write_len = fwrite(file_buffer, sizeof(char), min(DEFAULT_RECV_BUFFER, file_buffer_valid_len), fd);
+			// the recv function may not receive DEFAULT_RECV_BUFFER_SIZE bytes.
+			// use min(DEFAULT_RECV_BUFFER_SIZE, file_buffer_valid_len) instead.
+			int write_len = fwrite(file_buffer, sizeof(char), min(DEFAULT_RECV_BUFFER_SIZE, file_buffer_valid_len), fd);
 			file_buffer_valid_len -= write_len;
 			memmove(file_buffer, file_buffer + write_len, file_buffer_valid_len);
 		}
@@ -239,8 +254,8 @@ void file_upload(SSL * client_fd, char *buffer, int valid_len) {
 	fwrite(file_buffer, sizeof(char), file_buffer_valid_len - strlen(boundary) - 6, fd);
 	fclose(fd);
 	char msg[DEFAULT_MSG_BUFFER_SIZE];
-	char send_buffer[DEFAULT_SEND_BUFFER];
-	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
+	char send_buffer[DEFAULT_SEND_BUFFER_SIZE];
+	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
 	status_to_text(303, msg);
 	sprintf(send_buffer, "HTTP/1.1 %d %s\r\n", 303, msg);
 	sprintf(send_buffer, "%sConnection: keep-alive\r\n", send_buffer); //keep-alive
@@ -250,16 +265,18 @@ void file_upload(SSL * client_fd, char *buffer, int valid_len) {
 	return;
 }
 
-void file_download(SSL * client_fd, char *filename) {
+void file_download(SSL *client_fd, char *filename)
+{
 	urldecode(filename);
 	printf("%s\n", filename);
 	char msg[DEFAULT_MSG_BUFFER_SIZE];
-	char send_buffer[DEFAULT_SEND_BUFFER];
-	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
+	char send_buffer[DEFAULT_SEND_BUFFER_SIZE];
+	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
 	char filepath[DEFAULT_URI_BUFFER_SIZE] = "./resources/";
 	strcpy(filepath + strlen(filepath), filename);
 	FILE *fd = fopen(filepath, "rb");
-	if (fd == NULL) {
+	if (fd == NULL)
+	{
 		simple_format(client_fd, 500);
 		return;
 	}
@@ -275,25 +292,28 @@ void file_download(SSL * client_fd, char *filename) {
 	sprintf(send_buffer, "%sContent-Disposition: attachment;filename=%s\r\n\r\n", send_buffer, filename);
 	send_s(client_fd, send_buffer, strlen(send_buffer), 0);
 	int valid_buffer_size = 0;
-	while ((valid_buffer_size = fread(send_buffer, sizeof(char), DEFAULT_SEND_BUFFER, fd)) > 0) {
+	while ((valid_buffer_size = fread(send_buffer, sizeof(char), DEFAULT_SEND_BUFFER_SIZE, fd)) > 0)
+	{
 		send_s(client_fd, send_buffer, valid_buffer_size, 0);
 	}
 	fclose(fd);
 	return;
 }
 
-void file_download_chunked(SSL * client_fd, char *filename) {
+void file_download_chunked(SSL *client_fd, char *filename)
+{
 	urldecode(filename);
 	printf("%s\n", filename);
 	char msg[DEFAULT_MSG_BUFFER_SIZE];
-	char send_buffer[DEFAULT_SEND_BUFFER];
-	char size_buffer[DEFAULT_SEND_BUFFER];
-	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
-	memset(size_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
+	char send_buffer[DEFAULT_SEND_BUFFER_SIZE];
+	char size_buffer[DEFAULT_SEND_BUFFER_SIZE];
+	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
+	memset(size_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
 	char filepath[DEFAULT_URI_BUFFER_SIZE] = "./resources/";
 	strcpy(filepath + strlen(filepath), filename);
 	FILE *fd = fopen(filepath, "rb");
-	if (fd == NULL) {
+	if (fd == NULL)
+	{
 		simple_format(client_fd, 500);
 		return;
 	}
@@ -313,11 +333,12 @@ void file_download_chunked(SSL * client_fd, char *filename) {
 
 	send_s(client_fd, send_buffer, strlen(send_buffer), 0);
 
-	memset(size_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
-	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
+	memset(size_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
+	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
 
 	int valid_buffer_size = 0;
-	while ((valid_buffer_size = fread(send_buffer, sizeof(char), CHUNK_SIZE, fd)) > 0) {
+	while ((valid_buffer_size = fread(send_buffer, sizeof(char), CHUNK_SIZE, fd)) > 0)
+	{
 
 		sprintf(size_buffer, "%x\r\n", valid_buffer_size);
 		send_s(client_fd, size_buffer, strlen(size_buffer), 0);
@@ -326,8 +347,8 @@ void file_download_chunked(SSL * client_fd, char *filename) {
 		send_s(client_fd, "\r\n", strlen("\r\n"), 0);
 		//printf("%s%s", size_buffer, send_buffer);
 
-		memset(size_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
-		memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER);
+		memset(size_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
+		memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
 	}
 
 	sprintf(size_buffer, "%x\r\n", 0);
@@ -338,58 +359,87 @@ void file_download_chunked(SSL * client_fd, char *filename) {
 	return;
 }
 
-void router(SSL * client_fd, char *method, char *uri, char *buffer, int valid_len) {
+void router(SSL *client_fd, char *method, char *uri, char *buffer, int valid_len)
+{
 	char params[DEFAULT_URI_BUFFER_SIZE];
 	memset(params, 0, sizeof(char) * DEFAULT_URI_BUFFER_SIZE);
-	if (cut_params(uri, params) == -1) {
+	if (cut_params(uri, params) == -1)
+	{
 		printf("can not parse uri!\n%s\n%s\n", uri, params);
 		simple_format(client_fd, 500);
 		return;
 	}
 	printf("path: %s\nparams: %s\n", uri, params);
-	if (strcmp(uri, "/") == 0) {
-		if (strcmp(method, "GET") != 0) {
+	if (strcmp(uri, "/") == 0)
+	{
+		if (strcmp(method, "GET") != 0)
+		{
 			simple_format(client_fd, 500);
-		} else {
+		}
+		else
+		{
 			char print_msg[DEFAULT_MSG_BUFFER_SIZE];
 			memset(print_msg, 0, sizeof(char) * DEFAULT_MSG_BUFFER_SIZE);
 			if (get_value(params, "print_msg", print_msg, "&") == -1)
 				strcpy(print_msg, "hello");
 			homepage(client_fd, print_msg);
 		}
-	} else if (strcmp(uri, "/upload") == 0) {
-		if (strcmp(method, "POST") != 0) {
+	}
+	else if (strcmp(uri, "/upload") == 0)
+	{
+		if (strcmp(method, "POST") != 0)
+		{
 			simple_format(client_fd, 500);
-		} else {
+		}
+		else
+		{
 			file_upload(client_fd, buffer, valid_len);
 		}
-	} else if (strcmp(uri, "/download") == 0) {
-		char filename[DEFAULT_URI_BUFFER_SIZE];
-		if (get_value(params, "filename", filename, "&") == -1) {
-			printf("download parameters error\n");
-			exit(-1);
-		}
-
-		file_download_chunked(client_fd, filename);
-		//file_download(client_fd, filename);
-	} else if (strcmp(uri, "/img") == 0) {
-		if (strcmp(method, "GET") != 0) {
+	}
+	else if (strcmp(uri, "/download") == 0)
+	{
+		if (strcmp(method, "GET") != 0)
+		{
 			simple_format(client_fd, 500);
-		} else {
+		}
+		else
+		{
+			char filename[DEFAULT_URI_BUFFER_SIZE];
+			if (get_value(params, "filename", filename, "&") == -1)
+			{
+				printf("download parameters error\n");
+				exit(-1);
+			}
+
+			file_download_chunked(client_fd, filename);
+			//file_download(client_fd, filename);
+		}
+	}
+	else if (strcmp(uri, "/img") == 0)
+	{
+		if (strcmp(method, "GET") != 0)
+		{
+			simple_format(client_fd, 500);
+		}
+		else
+		{
 			char print_msg[DEFAULT_MSG_BUFFER_SIZE];
 			memset(print_msg, 0, sizeof(char) * DEFAULT_MSG_BUFFER_SIZE);
 			if (get_value(params, "print_msg", print_msg, "&") == -1)
 				strcpy(print_msg, "hello");
 			imgpage(client_fd, print_msg);
 		}
-	} else {
+	}
+	else
+	{
 		int status = 404;
 		simple_format(client_fd, status);
 	}
 	return;
 }
 
-void handle(SSL * client_fd, char *buffer, int valid_len) {
+void handle(SSL *client_fd, char *buffer, int valid_len)
+{
 	//获取返回的响应报文
 	char uri[DEFAULT_URI_BUFFER_SIZE];
 	char method[5];
@@ -399,11 +449,14 @@ void handle(SSL * client_fd, char *buffer, int valid_len) {
 	char msg[DEFAULT_MSG_BUFFER_SIZE];
 	sscanf(buffer, "%s %s %s", method, uri, version);
 	printf("receive request: method:%s uri:%s\n", method, uri);
-	if (strcmp(method, "GET") != 0 && strcmp(method, "POST") != 0) {
+	if (strcmp(method, "GET") != 0 && strcmp(method, "POST") != 0)
+	{
 		status = 501;
 		simple_format(client_fd, status);
 		return;
-	} else {
+	}
+	else
+	{
 		router(client_fd, method, uri, buffer, valid_len);
 	}
 }

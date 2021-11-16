@@ -7,9 +7,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 #include "secure.h"
- 
+
 #define BURSIZE 2048
 int socket_s(int __domain, int __type, int __protocol) __THROW;
 ssize_t recv_s(SSL * __fd, void *__buf, size_t __n, int __flags);
