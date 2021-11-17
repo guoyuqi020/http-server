@@ -71,22 +71,124 @@
 \date{}
 \maketitle
 \normalsize
+\section{实验内容简介}
+我们的HTTP服务器实现了三个基本功能：服务器主页获取、文件上传、文件下载。我们在服务器主页获取和文件下载这两个功能上实现了HTTP GET方法，在文件上传这个功能上实现了HTTP POST方法以及分块传输功能。同时我们针对文件上传功能实现了HTTP pipeline。我们还借助openssl库实现了SSL加密，目前我们的服务器只能通过https协议访问，不能通过普通http协议访问。
 \section{实现方法}
 \subsection{HTTP POST/GET方法}
+在本次实验中，由于我们的http-server使用纯C语言编写，因此无法使用高级框架解析请求头，也很难使用高级数据结构存储解析得到的信息。因此，我们使用较为简单的字符串匹配的方法手动实现HTTP请求头的解析。在我们的实现中，我们所实现的HTTP请求头解析功能只会解析与本次实验内容相关的项，对于其他无关项，我们的请求头解析功能不做识别和处理。
 
-\subsection{文件上传下载}
+HTTP GET方法的实现较为简单。在HTTP请求头中，第一行就包含了本次HTTP请求所访问的URI信息。在http协议中，对于URI，使用符号"?"作为分隔符分隔访问路径与参数，"?"之前的字符串表示所要访问的文件/应用所在路径，之后的字符串表示访问对应文件/应用时所需要的参数。参数以键值对key=value的形式出现，多个参数之间使用"\&"符号进行分隔。基于以上原则，我们编写代码实现了HTTP GET方法的解析功能，相关代码主要集中在lib/server\_handler.c文件中的cut\_params()函数和get\_value()函数中。需要注意的是，由于URI可能包含非英文字符，在使用之前需要先进行解码，解码代码位于lib/safe\_connect.c文件中的urldecode()函数中。
 
-\subsection{HTTP分块传输}
+HTTP POST方法的实现略微复杂。与HTTP GET方法不同，HTTP POST方法将请求参数放置于请求头的请求项中。对于文件上传功能，请求头会在Content-Length项中标识后续请求长度，并在boundary项中标识包裹文件内容所使用的特殊字符串。在每一个被boundary所指示的字符串所包裹的块中，都存在一个filename项，其指定了当前块内容所对应的文件名。根据以上信息，我们编写了HTTP POST解析功能，相关代码主要集中在lib/server\_handler.c文件中的get\_value()函数中。
+
+\subsection{文件上传、下载和分块传输}
+在服务器主页中，我们创建了如下的表单，以供用户选择文件并上传：
+\begin{lstlisting}[language=html]
+  <form action="/upload" method="post" enctype="multipart/form-data">
+  上传文件： <input type="file" name="upload_filename"><br>
+  <input type="submit">
+  </form>
+\end{lstlisting}
+当用户点击上传按钮后，浏览器会创建POST请求向服务器传送文件内容。我们的服务器在完成请求头解析、文件内容接受等一系列内容后，将接收到的文件保存到resources文件夹中，同时向浏览器返回重定向信息，将页面重新导向服务器主页。并在页面最上端显示“xx文件上传成功”的提示信息。文件上传的处理函数位于lib/server\_handler.c文件中的file\_upload()函数中。
+
+同时，我们还在服务器主页中，添加了服务器上已有文件的信息，并将每一条信息做成如下所示的超链接：
+\begin{lstlisting}[language=html]
+  <a href=\"/download?filename=${FILENAME}\">${FILENAME}</a><br>
+\end{lstlisting}
+
+每当用户点击对应的文件名，浏览器就会自动向服务器发送请求，开始文件的下载功能。我们的服务器在返回的请求头中设置如下两项，以便触发浏览器的下载功能：
+\begin{lstlisting}[language=C]
+  Content-Type: application/octet-stream
+  Content-Disposition: attachment;filename=${FILENAME}
+\end{lstlisting}
+
+文件下载的处理函数位于lib/server\_handler.c文件中的file\_download\_chunked()函数中。
+
+% TODO
+TODO： 分块传输
+
 
 \subsection{HTTP持久连接和管道}
 
 \subsection{使用openssl库实现HTTPS}
 
 \subsection{使用libevent实现多路并发}
+我们首先创建一个事件listen\_fd，指定其监视服务器套接字server\_fd，并设置其在接收到新连接时的回调函数为on\_accept()，相关代码如下:
+\begin{lstlisting}[language=C,title=server.c]
+  struct event listen_ev;
+	base = event_base_new();
+	event_set(&listen_ev, server_fd, EV_READ | EV_PERSIST, on_accept, NULL);
+	event_base_set(base, &listen_ev);
+	event_add(&listen_ev, NULL);
+	event_base_dispatch(base);
+\end{lstlisting}
+
+随后，在函数on\_accept()中，我们为服务器建立与客户端之间的连接，并处理相关请求，相关代码如下：
+\begin{lstlisting}[language=C, title=server.c]
+  void on_accept(int server_fd, short event, void *arg) 
+{
+	struct sockaddr_in client_addr;
+	socklen_t client_addr_size = sizeof(client_addr);
+	int client_fd;
+	char recv_buffer[DEFAULT_RECV_BUFFER_SIZE];
+	int n;
+	char reqs[N_REQ][DEFAULT_RECV_BUFFER_SIZE] = {0};
+	int recv_rest = 0;
+	// read_ev must allocate from heap memory, otherwise the program would crash from segmant fault
+	if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
+							&client_addr_size)) == -1)
+	{
+		perror("accept failed:");
+    return;
+	}
+
+	SSL *ssl = SSL_new(ctx);
+	SSL_set_fd(ssl, client_fd);
+
+	if (SSL_accept(ssl) <= 0)
+	{
+		perror("ssl state:");
+	}
+	memset(recv_buffer, 0, sizeof(char) * DEFAULT_RECV_BUFFER_SIZE);
+  while (1)
+	{
+		if (n == 0)
+			n = recv_s(ssl, recv_buffer + recv_rest, DEFAULT_RECV_BUFFER_SIZE - recv_rest, 0);
+		if (n == 0)
+			break;
+
+		int n_buffer;
+		int req_len[N_REQ] = {0};
+
+		memset(reqs, 0, sizeof(char) * N_REQ * DEFAULT_RECV_BUFFER_SIZE);
+		n_buffer = divide_buffer(recv_buffer, n, reqs, req_len, &recv_rest);
+
+		for (int i = 0; i < n_buffer; i++)
+		{
+			handle(ssl, reqs[i], req_len[i]);
+		}
+		memmove(recv_buffer, recv_buffer + n - recv_rest, recv_rest);
+		n = recv_rest;
+	}
+	SSL_shutdown(ssl);
+	SSL_free(ssl);
+
+	close(client_fd);
+}
+
+\end{lstlisting}
 
 \section{功能测试}
 \subsection{文件上传下载测试}
+我们已经在resources文件夹中放置了一些文件，包含各种格式类型（pdf、jpg、pptx、docx、xlsx等）。我们将这些文件上传后下载，并重新打开文件验证，发现这些文件的内容和格式都没有损坏。与此同时，服务器的主页也能够正确显示当前服务器上所存储的文件信息，如图\ref{fig:homepage}所示：
+\begin{figure}[!h]
+  \centering
+  \includegraphics[width=0.4\textwidth]{homepage.jpg}
+  \caption{服务器主页示意图}
+  \label{fig:homepage}
+\end{figure}
 
+因此服务器的文件上传下载功能运行良好。
 \subsection{持久连接和管道测试}
 
 \subsection{HTTPS测试}
