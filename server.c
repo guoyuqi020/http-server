@@ -70,7 +70,7 @@ struct event_base *base;
 
 SSL_CTX *ctx;
 
-void on_accept(int server_fd, short event, void *arg) //消灭僵尸进程 僵尸进程会占用资源如果一直不释放的话
+void on_accept(int server_fd, short event, void *arg)
 {
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_size = sizeof(client_addr);
@@ -84,6 +84,7 @@ void on_accept(int server_fd, short event, void *arg) //消灭僵尸进程 僵�
 							&client_addr_size)) == -1)
 	{
 		perror("accept failed:");
+		return;
 	}
 
 	SSL *ssl = SSL_new(ctx);
@@ -91,13 +92,13 @@ void on_accept(int server_fd, short event, void *arg) //消灭僵尸进程 僵�
 
 	if (SSL_accept(ssl) <= 0)
 	{
-		perror("ssl accept failed:");
+		perror("ssl state:");
 	}
 	memset(recv_buffer, 0, sizeof(char) * DEFAULT_RECV_BUFFER_SIZE);
 	while (1)
 	{
-
-		n = recv_s(ssl, recv_buffer + recv_rest, DEFAULT_RECV_BUFFER_SIZE - recv_rest, 0);
+		if (n == 0)
+			n = recv_s(ssl, recv_buffer + recv_rest, DEFAULT_RECV_BUFFER_SIZE - recv_rest, 0);
 		if (n == 0)
 			break;
 
@@ -112,6 +113,7 @@ void on_accept(int server_fd, short event, void *arg) //消灭僵尸进程 僵�
 			handle(ssl, reqs[i], req_len[i]);
 		}
 		memmove(recv_buffer, recv_buffer + n - recv_rest, recv_rest);
+		n = recv_rest;
 	}
 	SSL_shutdown(ssl);
 	SSL_free(ssl);

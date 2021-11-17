@@ -306,9 +306,9 @@ void file_download_chunked(SSL *client_fd, char *filename)
 	printf("%s\n", filename);
 	char msg[DEFAULT_MSG_BUFFER_SIZE];
 	char send_buffer[DEFAULT_SEND_BUFFER_SIZE];
-	char size_buffer[DEFAULT_SEND_BUFFER_SIZE];
+	char read_buffer[DEFAULT_SEND_BUFFER_SIZE];
 	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
-	memset(size_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
+	memset(read_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
 	char filepath[DEFAULT_URI_BUFFER_SIZE] = "./resources/";
 	strcpy(filepath + strlen(filepath), filename);
 	FILE *fd = fopen(filepath, "rb");
@@ -333,28 +333,31 @@ void file_download_chunked(SSL *client_fd, char *filename)
 
 	send_s(client_fd, send_buffer, strlen(send_buffer), 0);
 
-	memset(size_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
+	memset(read_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
 	memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
 
 	int valid_buffer_size = 0;
-	while ((valid_buffer_size = fread(send_buffer, sizeof(char), CHUNK_SIZE, fd)) > 0)
+	int chunk_len = 0;
+	while ((valid_buffer_size = fread(read_buffer, sizeof(char), CHUNK_SIZE, fd)) > 0)
 	{
+		sprintf(send_buffer, "%x\r\n", valid_buffer_size);
+		chunk_len = strlen(send_buffer);
+		memcpy(send_buffer + chunk_len, read_buffer, valid_buffer_size);
+		chunk_len += valid_buffer_size;
+		strcpy(send_buffer + chunk_len, "\r\n");
+		chunk_len += strlen("\r\n");
+		send_s(client_fd, send_buffer, chunk_len, 0);
 
-		sprintf(size_buffer, "%x\r\n", valid_buffer_size);
-		send_s(client_fd, size_buffer, strlen(size_buffer), 0);
-
-		send_s(client_fd, send_buffer, valid_buffer_size, 0);
-		send_s(client_fd, "\r\n", strlen("\r\n"), 0);
 		//printf("%s%s", size_buffer, send_buffer);
 
-		memset(size_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
+		memset(read_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
 		memset(send_buffer, 0, sizeof(char) * DEFAULT_SEND_BUFFER_SIZE);
 	}
 
-	sprintf(size_buffer, "%x\r\n", 0);
-	send_s(client_fd, size_buffer, strlen(size_buffer), 0);
+	sprintf(read_buffer, "%x\r\n", 0);
+	send_s(client_fd, read_buffer, strlen(read_buffer), 0);
 	send_s(client_fd, "\r\n", strlen("\r\n"), 0);
-	printf("%s\r\n", size_buffer);
+	printf("%s\r\n", read_buffer);
 	fclose(fd);
 	return;
 }
