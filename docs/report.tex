@@ -75,6 +75,8 @@
 我们的HTTP服务器实现了三个基本功能：服务器主页获取、文件上传、文件下载。我们在服务器主页获取和文件下载这两个功能上实现了HTTP GET方法，在文件上传这个功能上实现了HTTP POST方法以及分块传输功能。同时我们针对文件上传功能实现了HTTP pipeline。我们还借助openssl库实现了SSL加密，目前我们的服务器只能通过https协议访问，不能通过普通http协议访问。
 
 \section{项目编译与部署}
+我们的代码已经托管到Github平台，仓库地址\href{https://github.com/guoyuqi020/http-server}{https://github.com/guoyuqi020/http-server.git}。
+
 本项目使用纯C语言开发，使用cmake工具辅助构建。项目编译方法如下：
 \begin{lstlisting}[language=bash]
 	mkdir build
@@ -147,7 +149,7 @@ HTTP POST方法的实现略微复杂。与HTTP GET方法不同，HTTP POST方法
 
 \subsection{分块传输}
 分块传输是http协议支持的一种内容编码方式。通常服务器在向客户端返回内容时，会指定http响应头的Content-Length字段为返回的报文长度，客户端据此判断响应报文何时结束。然而，这种方法有不便之处，如响应内容过长或提前难以预知长度的情况均不适合固定长度传输。分块传输不必指定Content-Length字段，而是指定Transfer-Encoding字段为chunked，然后每块头部用16进制指定该块的大小。一个典型的分块传输响应如下：
-\begin{lstlisting}[caption = chunked encoding, label = encoding]
+\begin{lstlisting}[title = 分块传输HTTP请求头示意]
 HTTP/1.1 200 OK
 Content-Type: text/plain
 Transfer-Encoding: chunked
